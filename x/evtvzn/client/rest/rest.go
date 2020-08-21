@@ -9,4 +9,6 @@ import (
 // RegisterRoutes registers evtvzn-related REST handlers to a router
 func RegisterRoutes(cliCtx context.CLIContext, r *mux.Router) {
   // this line is used by starport scaffolding
+	r.HandleFunc("/evtvzn/artist", listArtistHandler(cliCtx, "evtvzn")).Methods("GET")
+	r.HandleFunc("/evtvzn/artist", createArtistHandler(cliCtx)).Methods("POST")
 }
