@@ -1,5 +1,7 @@
 accounts:
   - name: user1
-    coins: ["1000token", "100000000stake"]
+    coins: ["500drop", "10000token", "100000000stake"]
   - name: user2
-    coins: ["500token"]
+    coins: ["500drop", "10000token", "100000000stake"]
+  - name: dropgiverfaucet
+    coins: ["100000000drop", "1000token"]
