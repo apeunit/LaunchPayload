@@ -22,17 +22,17 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/cosmos/cosmos-sdk/x/supply"
-	"github.com/apeunit/evtvzn/x/evtvzn"
-	evtvznkeeper "github.com/apeunit/evtvzn/x/evtvzn/keeper"
-	evtvzntypes "github.com/apeunit/evtvzn/x/evtvzn/types"
+	"github.com/apeunit/launchpayload/x/launchpayload"
+	launchpayloadkeeper "github.com/apeunit/launchpayload/x/launchpayload/keeper"
+	launchpayloadtypes "github.com/apeunit/launchpayload/x/launchpayload/types"
   // this line is used by starport scaffolding
 )
 
-const appName = "evtvzn"
+const appName = "launchpayload"
 
 var (
-	DefaultCLIHome = os.ExpandEnv("$HOME/.evtvzncli")
-	DefaultNodeHome = os.ExpandEnv("$HOME/.evtvznd")
+	DefaultCLIHome = os.ExpandEnv("$HOME/.launchpayloadcli")
+	DefaultNodeHome = os.ExpandEnv("$HOME/.launchpayloadd")
 	ModuleBasics = module.NewBasicManager(
 		genutil.AppModuleBasic{},
 		auth.AppModuleBasic{},
@@ -40,7 +40,7 @@ var (
 		staking.AppModuleBasic{},
 		params.AppModuleBasic{},
 		supply.AppModuleBasic{},
-		evtvzn.AppModuleBasic{},
+		launchpayload.AppModuleBasic{},
     // this line is used by starport scaffolding # 2
 	)
 
@@ -77,7 +77,7 @@ type NewApp struct {
 	stakingKeeper  staking.Keeper
 	supplyKeeper   supply.Keeper
 	paramsKeeper   params.Keeper
-	evtvznKeeper evtvznkeeper.Keeper
+	launchpayloadKeeper launchpayloadkeeper.Keeper
   // this line is used by starport scaffolding # 3
 	mm *module.Manager
 
@@ -102,7 +102,7 @@ func NewInitApp(
     staking.StoreKey,
 		supply.StoreKey,
     params.StoreKey,
-    evtvzntypes.StoreKey,
+    launchpayloadtypes.StoreKey,
     // this line is used by starport scaffolding # 5
   )
 
@@ -154,10 +154,10 @@ func NewInitApp(
 		staking.NewMultiStakingHooks(),
 	)
 
-	app.evtvznKeeper = evtvznkeeper.NewKeeper(
+	app.launchpayloadKeeper = launchpayloadkeeper.NewKeeper(
 		app.bankKeeper,
 		app.cdc,
-		keys[evtvzntypes.StoreKey],
+		keys[launchpayloadtypes.StoreKey],
 	)
 
   // this line is used by starport scaffolding # 4
@@ -167,7 +167,7 @@ func NewInitApp(
 		auth.NewAppModule(app.accountKeeper),
 		bank.NewAppModule(app.bankKeeper, app.accountKeeper),
 		supply.NewAppModule(app.supplyKeeper, app.accountKeeper),
-		evtvzn.NewAppModule(app.evtvznKeeper, app.bankKeeper),
+		launchpayload.NewAppModule(app.launchpayloadKeeper, app.bankKeeper),
 		staking.NewAppModule(app.stakingKeeper, app.accountKeeper, app.supplyKeeper),
     // this line is used by starport scaffolding # 6
 	)
@@ -178,7 +178,7 @@ func NewInitApp(
 		staking.ModuleName,
 		auth.ModuleName,
 		bank.ModuleName,
-		evtvzntypes.ModuleName,
+		launchpayloadtypes.ModuleName,
 		supply.ModuleName,
 		genutil.ModuleName,
     // this line is used by starport scaffolding # 7
