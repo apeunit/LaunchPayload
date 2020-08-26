@@ -26,9 +26,8 @@ build: build-dist
 
 build-dist: $(GOFILES)
 	@echo build binary to $(OUTPUTFOLDER)
-	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -ldflags '-s -w -extldflags "-static" -X main.Version=$(GIT_DESCR)' -o $(OUTPUTFOLDER)/$(APP) .
-	@echo copy resources
-	cp -r README.md LICENSE $(OUTPUTFOLDER)
+	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -ldflags '-s -w -extldflags "-static" -X main.Version=$(GIT_DESCR)' -o $(OUTPUTFOLDER)/launchpayloadcli ./cmd/launchpayloadcli
+	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -ldflags '-s -w -extldflags "-static" -X main.Version=$(GIT_DESCR)' -o $(OUTPUTFOLDER)/launchpayloadd ./cmd/launchpayloadd
 	@echo done
 
 build-zip: build
