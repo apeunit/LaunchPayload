@@ -3,22 +3,24 @@
 ############################
 FROM golang:alpine AS builder
 ARG DOCKER_TAG=0.0.0
-ARG APP=LaunchPayload
+ARG DAEMON=launchpayloadd
+ARG CLI=launchpayloadcli
 # Install git.
-# checkout the project 
+# checkout the project
 WORKDIR /builder
 COPY . .
-# Fetch dependencies.
-RUN go get -d -v
+
 # Build the binary.
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /$APP -ldflags="-s -w -extldflags \"-static\" -X main.Version=$DOCKER_TAG"
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /dist/$CLI -ldflags="-s -w -extldflags \"-static\" -X main.Version=$DOCKER_TAG" ./cmd/$CLI
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /dist/$DAEMON -ldflags="-s -w -extldflags \"-static\" -X main.Version=$DOCKER_TAG" ./cmd/$DAEMON
 ############################
 # STEP 2 build a small image
 ############################
 FROM scratch
 # Copy our static executable + data
-COPY --from=builder /$APP /
+COPY --from=builder /dist/ /payload/
+RUN mkdir /payload/config
 # Run the whole shebang.
-ENTRYPOINT [ "/$APP" ]
+ENTRYPOINT [ "/payload/$DAEMON" ]
 # TODO: what is the command that we should run?
-CMD [ "start"]
+CMD [ "start", "--home", "/payload/config/daemon/"]
