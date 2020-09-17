@@ -36,6 +36,11 @@ build-zip: build
 	sha1sum $(APP)-$(GIT_DESCR).zip
 	@echo done
 
+install: build
+	@echo installing to $(GOPATH)/bin
+	cp dist/* $(GOPATH)/bin
+	@echo done
+
 test: test-all
 
 test-all:
