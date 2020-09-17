@@ -16,11 +16,11 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /dist/$DAEMON -ldflags="-s
 ############################
 # STEP 2 build a small image
 ############################
-FROM scratch
+FROM alpine
 # Copy our static executable + data
 COPY --from=builder /dist/ /payload/
 RUN mkdir /payload/config
+VOLUME /payload/config
 # Run the whole shebang.
-ENTRYPOINT [ "/payload/$DAEMON" ]
 # TODO: what is the command that we should run?
-CMD [ "start", "--home", "/payload/config/daemon/"]
+CMD [ "/payload/launchpayloadd", "start", "--home", "/payload/config/daemon/"]
