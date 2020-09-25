@@ -21,6 +21,9 @@ FROM alpine
 COPY --from=builder /dist/ /payload/
 RUN mkdir /payload/config
 VOLUME /payload/config
+USER 1000:50
+EXPOSE 26656 26657 26658
 # Run the whole shebang.
 # TODO: what is the command that we should run?
-CMD [ "/payload/launchpayloadd", "start", "--home", "/payload/config/daemon/"]
+CMD ["start", "--home", "/payload/config/daemon/"]
+ENTRYPOINT [ "/payload/launchpayloadd", "start", "--home", "/payload/config/daemon/"]
