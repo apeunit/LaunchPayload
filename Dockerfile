@@ -25,5 +25,4 @@ USER 1000:50
 EXPOSE 26656 26657 26658
 # Run the whole shebang.
 # TODO: what is the command that we should run?
-CMD ["start", "--home", "/payload/config/daemon/"]
-ENTRYPOINT [ "/payload/launchpayloadd", "start", "--home", "/payload/config/daemon/"]
+CMD [ "/payload/launchpayloadd", "start", "--home", "/payload/config/daemon/"]
