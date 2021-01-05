@@ -1,0 +1,10 @@
+
+---
+listen_addr: "127.0.0.1:8000"
+chain_id: "drop-28b10d4eff415a7b0b2c"
+cli_binary_path: "/tmp/workspace/bin/launchpayloadcli"
+cli_config_path: "/tmp/workspace/evts/drop-28b10d4eff415a7b0b2c/nodeconfig/extra_accounts/dropgiver"
+faucet_addr: "dropgiver"
+unit: "drop"
+node_addr: "127.0.0.1:26657"
+secret: "abadjoke"

@@ -28,6 +28,7 @@ build-dist: $(GOFILES)
 	@echo build binary to $(OUTPUTFOLDER)
 	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -ldflags '-s -w -extldflags "-static" -X main.Version=$(GIT_DESCR)' -o $(OUTPUTFOLDER)/launchpayloadcli ./cmd/launchpayloadcli
 	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -ldflags '-s -w -extldflags "-static" -X main.Version=$(GIT_DESCR)' -o $(OUTPUTFOLDER)/launchpayloadd ./cmd/launchpayloadd
+	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -ldflags '-s -w -extldflags "-static" -X main.Version=$(GIT_DESCR)' -o $(OUTPUTFOLDER)/faucet ./cmd/faucet
 	@echo done
 
 build-zip: build
@@ -74,7 +75,7 @@ docker-push:
 	docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE):$(DOCKER_TAG)
 	@echo done
 
-docker-run: 
+docker-run:
 	docker run -p 2004:2004 $(DOCKER_IMAGE):latest
 
 debug-start:
@@ -113,4 +114,4 @@ release-minor: _release-minor git-release
 
 _release-major:
 	$(eval GIT_DESCR = $(shell git describe --tags | awk -F '("|")' '{ print($$1)}' | awk -F. '{$$(NF-2) = $$(NF-2) + 1;} 1' | sed 's/ /./g' | awk -F. '{$$(NF-1) = 0;} 1' | sed 's/ /./g' | awk -F. '{$$(NF) = 0;} 1' | sed 's/ /./g' ))
-release-major: _release-major git-release 
+release-major: _release-major git-release
