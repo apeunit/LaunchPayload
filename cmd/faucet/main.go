@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -15,13 +17,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var faucetConfig *FaucetConfig
+var fConfig *faucetConfig
 var configOutputPath string
 
-const cliBinaryPath = "/payload/launchpayloadcli"
-const cliConfigPath = "/home/docker/nodeconfig/faucet_account"
+const defaultCLIBinaryPath = "/payload/launchpayloadcli"
+const defaultCLIConfigPath = "/home/docker/nodeconfig/faucet_account"
 
-type FaucetConfig struct {
+type faucetConfig struct {
 	ListenAddr    string `yaml:"listen_addr"`
 	ChainID       string `yaml:"chain_id"`
 	CliBinaryPath string `yaml:"cli_binary_path"`
@@ -32,8 +34,16 @@ type FaucetConfig struct {
 	Secret        string `yaml:"secret"`
 }
 
-func (fc *FaucetConfig) Parse(data []byte) error {
-	return yaml.Unmarshal(data, fc)
+func (f *faucetConfig) Parse(data []byte) error {
+	return yaml.Unmarshal(data, f)
+}
+
+// SendRequest represents the send request that will come in as JSON
+type SendRequest struct {
+	ToAddr string `json:"to_address"`
+	Amount string `json:"amount"`
+	Memo   string `json:"memo"`
+	Token  string `json:"token"`
 }
 
 func main() {
@@ -63,13 +73,13 @@ func main() {
 	}
 }
 
-// LoadFaucetConfig loads FaucetConfig from a .yaml file
-func LoadFaucetConfig(filename string) (fc *FaucetConfig, err error) {
+// loadFaucetConfig loads FaucetConfig from a .yaml file
+func loadFaucetConfig(filename string) (fc *faucetConfig, err error) {
 	f, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return
 	}
-	fc = new(FaucetConfig)
+	fc = new(faucetConfig)
 	err = yaml.Unmarshal(f, fc)
 	if err != nil {
 		return
@@ -87,14 +97,14 @@ func RunCommand(c string) (output string, err error) {
 }
 
 // RunStatus runs launchpayloadcli status --node tcp://.... -o json
-func RunStatus(fc *FaucetConfig) (output string, err error) {
+func RunStatus(fc *faucetConfig) (output string, err error) {
 	c := fmt.Sprintf("%s status --node tcp://%s -o json", fc.CliBinaryPath, fc.NodeAddr)
 	return RunCommand(c)
 }
 
-// HttpRunStatus is a HTTP wrapper function around RunStatus
-func HttpRunStatus(w http.ResponseWriter, r *http.Request) {
-	o, err := RunStatus(faucetConfig)
+// HTTPRunStatus is a HTTP wrapper function around RunStatus
+func HTTPRunStatus(w http.ResponseWriter, r *http.Request) {
+	o, err := RunStatus(fConfig)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(o))
@@ -105,50 +115,70 @@ func HttpRunStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // RunSendTx runs launchpayloadcli tx send FROM_ADDR DEST_ADDR AMOUNT
-func RunSendTx(fc *FaucetConfig, destAddr, amount string) (output string, err error) {
-	cliOptions := fmt.Sprintf("--home /payload/config/faucet_account --keyring-backend test --chain-id %s --node tcp://%s -o json", fc.ChainID, fc.NodeAddr)
+func RunSendTx(fc *faucetConfig, destAddr, amount string) (output string, err error) {
+	cliOptions := fmt.Sprintf("--home %s --keyring-backend test --chain-id %s --node tcp://%s -o json", fc.CliConfigPath, fc.ChainID, fc.NodeAddr)
 	cliSend := fmt.Sprintf("%s tx send %s %s %s %s --yes", fc.CliBinaryPath, fc.FaucetAddr, destAddr, amount, cliOptions)
 	return RunCommand(cliSend)
 }
 
-// HttpRunSendTx is a http wrapper function around RunSendTx that uses a token for authentication
-func HttpRunSendTx(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	destAddr := params["destAddr"]
-	amount := params["amount"]
-	err := r.ParseForm()
-	if err != nil {
-		log.Fatal(err)
-		w.WriteHeader(http.StatusNetworkAuthenticationRequired)
-		return
+// HTTPRunSendTx is a http wrapper function around RunSendTx that uses a token for authentication
+func HTTPRunSendTx(w http.ResponseWriter, r *http.Request) {
+	headerContentType := r.Header.Get("Content-Type")
+	if headerContentType != "application/json" {
+		errorResponse(w, "Content-Type was not set to application/json", http.StatusUnsupportedMediaType)
 	}
-	token := r.Form.Get("token")
-	if token != faucetConfig.Secret {
-		log.Println("Someone sent the wrong token")
-		w.WriteHeader(http.StatusNetworkAuthenticationRequired)
+
+	var req SendRequest
+	var unmarshalErr *json.UnmarshalTypeError
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	err := decoder.Decode(&req)
+	if err != nil {
+		if errors.As(err, &unmarshalErr) {
+			errorResponse(w, "Bad Request. Wrong Type for field "+unmarshalErr.Field, http.StatusBadRequest)
+		} else {
+			errorResponse(w, "Bad Request "+err.Error(), http.StatusBadRequest)
+		}
 		return
 	}
 
-	o, err := RunSendTx(faucetConfig, destAddr, amount)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(o))
+	if req.Token != fConfig.Secret {
+		log.Println("Someone sent the wrong token")
+		errorResponse(w, "Wrong authentication token", http.StatusNetworkAuthenticationRequired)
 		return
 	}
+
+	o, err := RunSendTx(fConfig, req.ToAddr, req.Amount)
+	if err != nil {
+		errorResponse(w, fmt.Sprintf("An error occurred while running the CLI tx send command: %s", err), http.StatusInternalServerError)
+		return
+	}
+	errorResponse(w, o, http.StatusOK)
+	return
+
+}
+
+func errorResponse(w http.ResponseWriter, message string, httpStatusCode int) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(o))
+	w.WriteHeader(httpStatusCode)
+	resp := make(map[string]string)
+	resp["message"] = message
+	jsonResp, _ := json.Marshal(resp)
+	w.Write(jsonResp)
 }
 
 func startFaucet(c *cobra.Command, args []string) (err error) {
-	fc, err := LoadFaucetConfig(args[0])
-	faucetConfig = fc
+	fc, err := loadFaucetConfig(args[0])
+	fConfig = fc
 	if err != nil {
 		return err
 	}
 
 	router := mux.NewRouter()
-	router.HandleFunc("/status", HttpRunStatus).Methods("GET")
-	router.HandleFunc("/send/{destAddr}/{amount}", HttpRunSendTx).Methods("POST")
+	router.HandleFunc("/status", HTTPRunStatus).Methods("GET")
+	router.HandleFunc("/send", HTTPRunSendTx).Methods("POST")
 	log.Fatal(http.ListenAndServe(fc.ListenAddr, router))
 
 	return nil
@@ -160,11 +190,11 @@ func generateConfig(c *cobra.Command, args []string) (err error) {
 	tokenSymbol := args[2]
 	nodeIP := args[3]
 
-	fc := FaucetConfig{
+	fc := faucetConfig{
 		ListenAddr:    "0.0.0.0:8000",
 		ChainID:       evtID,
-		CliBinaryPath: cliBinaryPath,
-		CliConfigPath: cliConfigPath,
+		CliBinaryPath: defaultCLIBinaryPath,
+		CliConfigPath: defaultCLIConfigPath,
 		FaucetAddr:    faucetAddr,
 		Unit:          tokenSymbol,
 		NodeAddr:      fmt.Sprintf("%s:26657", nodeIP),
