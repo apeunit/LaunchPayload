@@ -38,8 +38,8 @@ func (f *faucetConfig) Parse(data []byte) error {
 	return yaml.Unmarshal(data, f)
 }
 
-// SendRequest represents the send request that will come in as JSON
-type SendRequest struct {
+// sendRequest represents the send request that will come in as JSON
+type sendRequest struct {
 	ToAddr string `json:"to_address"`
 	Amount string `json:"amount"`
 	Memo   string `json:"memo"`
@@ -115,8 +115,15 @@ func HTTPRunStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // RunSendTx runs launchpayloadcli tx send FROM_ADDR DEST_ADDR AMOUNT
-func RunSendTx(fc *faucetConfig, destAddr, amount string) (output string, err error) {
-	cliOptions := fmt.Sprintf("--home %s --keyring-backend test --chain-id %s --node tcp://%s -o json", fc.CliConfigPath, fc.ChainID, fc.NodeAddr)
+func RunSendTx(fc *faucetConfig, destAddr, amount, memo string) (output string, err error) {
+	var cliOptions string
+
+	cliOptions = fmt.Sprintf("--home %s --keyring-backend test --chain-id %s --node tcp://%s -o json", fc.CliConfigPath, fc.ChainID, fc.NodeAddr)
+
+	if memo != "" {
+		cliOptions = strings.Join([]string{fmt.Sprintf(`--memo %s`, memo), cliOptions}, " ")
+	}
+
 	cliSend := fmt.Sprintf("%s tx send %s %s %s %s --yes", fc.CliBinaryPath, fc.FaucetAddr, destAddr, amount, cliOptions)
 	return RunCommand(cliSend)
 }
@@ -128,7 +135,7 @@ func HTTPRunSendTx(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, "Content-Type was not set to application/json", http.StatusUnsupportedMediaType)
 	}
 
-	var req SendRequest
+	var req sendRequest
 	var unmarshalErr *json.UnmarshalTypeError
 
 	decoder := json.NewDecoder(r.Body)
@@ -150,12 +157,12 @@ func HTTPRunSendTx(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	o, err := RunSendTx(fConfig, req.ToAddr, req.Amount)
+	o, err := RunSendTx(fConfig, req.ToAddr, req.Amount, req.Memo)
 	if err != nil {
 		errorResponse(w, fmt.Sprintf("An error occurred while running the CLI tx send command: %s", err), http.StatusInternalServerError)
 		return
 	}
-	errorResponse(w, o, http.StatusOK)
+	respondRaw(w, o, http.StatusOK)
 	return
 
 }
@@ -167,6 +174,12 @@ func errorResponse(w http.ResponseWriter, message string, httpStatusCode int) {
 	resp["message"] = message
 	jsonResp, _ := json.Marshal(resp)
 	w.Write(jsonResp)
+}
+
+func respondRaw(w http.ResponseWriter, message string, httpStatusCode int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(httpStatusCode)
+	w.Write([]byte(message))
 }
 
 func startFaucet(c *cobra.Command, args []string) (err error) {
