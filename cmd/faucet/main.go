@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
@@ -19,9 +20,6 @@ import (
 
 var fConfig *faucetConfig
 var configOutputPath string
-
-const defaultCLIBinaryPath = "/payload/launchpayloadcli"
-const defaultCLIConfigPath = "/home/docker/nodeconfig/faucet_account"
 
 type faucetConfig struct {
 	ListenAddr    string `yaml:"listen_addr"`
@@ -47,6 +45,7 @@ type sendRequest struct {
 }
 
 func main() {
+	log.SetLevel(log.DebugLevel)
 	var rootCmd = &cobra.Command{
 		Use:   "faucet <configfile.yml>",
 		Short: "A faucet to dispense some drops using launchpayloadcli",
@@ -55,9 +54,9 @@ func main() {
 	}
 
 	var genCfgCmd = &cobra.Command{
-		Use:   "generate-config EVENT_ID FAUCET_ADDR TOKEN_SYMBOL NODE_IP",
+		Use:   "generate-config EVENT_ID FAUCET_ADDR TOKEN_SYMBOL NODE_IP CLI_BINARY_PATH CLI_CONFIG_PATH",
 		Short: "Generate a configuration file from the arguments",
-		Args:  cobra.ExactArgs(4),
+		Args:  cobra.ExactArgs(6),
 		RunE:  generateConfig,
 	}
 
@@ -90,9 +89,12 @@ func loadFaucetConfig(filename string) (fc *faucetConfig, err error) {
 // RunCommand is a general purpose CLI program running function
 func RunCommand(c string) (output string, err error) {
 	csplit := strings.Split(c, " ")
-	log.Println("RunCommand", c)
+	log.Infoln("RunCommand", c)
 	out, err := exec.Command(csplit[0], csplit[1:]...).CombinedOutput()
 	output = string(out)
+	if err != nil {
+		log.Debugln(output)
+	}
 	return
 }
 
@@ -159,7 +161,7 @@ func HTTPRunSendTx(w http.ResponseWriter, r *http.Request) {
 
 	o, err := RunSendTx(fConfig, req.ToAddr, req.Amount, req.Memo)
 	if err != nil {
-		errorResponse(w, fmt.Sprintf("An error occurred while running the CLI tx send command: %s", err), http.StatusInternalServerError)
+		errorResponse(w, fmt.Sprintf("An error occurred while running the CLI tx send command: %s", o), http.StatusInternalServerError)
 		return
 	}
 	respondRaw(w, o, http.StatusOK)
@@ -202,12 +204,14 @@ func generateConfig(c *cobra.Command, args []string) (err error) {
 	faucetAddr := args[1]
 	tokenSymbol := args[2]
 	nodeIP := args[3]
+	cliBinaryPath := args[4]
+	cliConfigPath := args[5]
 
 	fc := faucetConfig{
 		ListenAddr:    "0.0.0.0:8000",
 		ChainID:       evtID,
-		CliBinaryPath: defaultCLIBinaryPath,
-		CliConfigPath: defaultCLIConfigPath,
+		CliBinaryPath: cliBinaryPath,
+		CliConfigPath: cliConfigPath,
 		FaucetAddr:    faucetAddr,
 		Unit:          tokenSymbol,
 		NodeAddr:      fmt.Sprintf("%s:26657", nodeIP),
