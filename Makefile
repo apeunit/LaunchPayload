@@ -66,7 +66,7 @@ docker: docker-build
 
 docker-build:
 	@echo copy resources
-	docker build --build-arg DOCKER_TAG='$(GIT_DESCR)' --build-arg APP='$(APP)' -t $(DOCKER_IMAGE)  .
+	docker build --build-arg DOCKER_TAG='$(GIT_DESCR)' --build-arg APP='$(APP)' -t $(DOCKER_REGISTRY)/$(DOCKER_IMAGE):$(DOCKER_TAG)  .
 	@echo done
 
 docker-push:
