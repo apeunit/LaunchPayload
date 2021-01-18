@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var tFc = &FaucetConfig{
+var tFc = &faucetConfig{
 	ListenAddr:    "127.0.0.1:8000",
 	ChainID:       "drop-28b10d4eff415a7b0b2c",
 	CliBinaryPath: "/tmp/workspace/bin/launchpayloadcli",
@@ -20,11 +20,11 @@ var tFc = &FaucetConfig{
 }
 
 func TestLoadFaucetConfig(t *testing.T) {
-	fc, err := LoadFaucetConfig("testdata/dropevent.yaml")
+	fc, err := loadFaucetConfig("testdata/dropevent.yaml")
 	if err != nil {
 		t.Error(err)
 	}
-	expectedFc := &FaucetConfig{
+	expectedFc := &faucetConfig{
 		ListenAddr:    "127.0.0.1:8000",
 		ChainID:       "drop-28b10d4eff415a7b0b2c",
 		CliBinaryPath: "/tmp/workspace/bin/launchpayloadcli",
@@ -59,10 +59,10 @@ func TestHttpRunStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	faucetConfig = tFc
+	fConfig = tFc
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(HttpRunStatus)
+	handler := http.HandlerFunc(HTTPRunStatus)
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -84,7 +84,7 @@ func TestHttpRunStatus(t *testing.T) {
 }
 
 func testRunSendTx(t *testing.T) {
-	o, err := RunSendTx(tFc, "cosmos109cjtu8vaperd7hxfyx90a4p62le4el76jlut0", "1stake")
+	o, err := RunSendTx(tFc, "cosmos109cjtu8vaperd7hxfyx90a4p62le4el76jlut0", "1stake", "")
 	if err != nil {
 		t.Error(err)
 	}
