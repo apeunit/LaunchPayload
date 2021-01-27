@@ -1,6 +1,6 @@
 # launchpayload
 
-**launchpayload** is the default blockchain application generated with [Starport](https://github.com/tendermint/starport). It serves as a template of how to package the Cosmos blockchain as a Docker image so that multiple instances thereof can be spun up with [lctrld](https://github.com/apeunit/launchcontrold).
+**launchpayload** is the default blockchain application generated with [Starport](https://github.com/tendermint/starport). It serves as a template of how to package the Cosmos blockchain as a Docker image so that multiple instances thereof can be spun up with [LaunchControlD](https://github.com/apeunit/launchcontrold). It is also used as the blockchain backend behind [Eventivize](https://blog.apeunit.com/were-drop-ing-eventivize-ctm-2021/) - context and details as to how everything works together are explained in [this blog post](https://dev.to/apeunit/the-tech-behind-eventivize-drops-3o7k).
 
 launchpayload includes a simple faucet service under `cmd/faucet`.
 
@@ -10,7 +10,7 @@ Script files save `lctrld` from having to know too many details of how to config
 
 Currently, the process of generating the genesis.json and validator node configuration is tightly coupled with `lctrld`. This will be improved in the future.
 
-## Building
+## Usage
 Build the binaries to `dist/`
 ```sh
 > make build
@@ -21,24 +21,4 @@ Build the docker image (only possible after building binaries)
 > make docker
 ```
 
-## Starport Local Development
-### Get started
-
-```
-starport serve
-```
-
-`serve` command installs dependencies, initializes and runs the application.
-
-### Configure
-
-Initialization parameters of your app are stored in `config.yml`.
-
-### `accounts`
-
-A list of user accounts created during genesis of your application.
-
-| Key   | Required | Type            | Description                                       |
-| ----- | -------- | --------------- | ------------------------------------------------- |
-| name  | Y        | String          | Local name of the key pair                        |
-| coins | Y        | List of Strings | Initial coins with denominations (e.g. "100coin") |
+Push to your docker repository and follow the instructions in [LaunchControlD](https://github.com/apeunit/launchcontrold) to tell `lctrld` to deploy your image to the virtual machines.
